@@ -5,6 +5,9 @@
 //求向量的2范数
 double norm2(int b,int g,int r);
 
+//差分法获得前景图：场景-背景=前景
+int differRGB();
+
 //色度差阴影检测
 int chromaticityDiffer();
 

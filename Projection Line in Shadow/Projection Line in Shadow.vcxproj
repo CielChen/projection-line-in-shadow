@@ -63,13 +63,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="differRGB.h" />
     <ClInclude Include="shadow_detection.h" />
+    <ClInclude Include="variable.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="differRGB.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="shadow_detection.cpp" />
+    <ClCompile Include="variable.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

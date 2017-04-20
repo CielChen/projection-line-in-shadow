@@ -5,26 +5,26 @@ Date: 2017/03/01
 Function: 阴影检测
 ------------------------------------------------
 */
-
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <math.h>
 #include <limits.h>
 #include <cv.h>
+#include <cxcore.h>
+#include <highgui.h>
+#include "variable.h"
+//#include "differRGB.h"
 #include "shadow_detection.h"
-
 using namespace cv;
 using namespace std;
 
-/*
-#define WIDTH 1408  //HoloLens图像宽度
-#define HEIGHT 792  //HoloLens图像高度
-*/
-
+//#define WIDTH 1408  //HoloLens图像宽度
+//#define HEIGHT 792  //HoloLens图像高度
 
 #define WIDTH 1216  //HoloLens视频截图宽度
 #define HEIGHT 684  //HoloLens视频截图高度
@@ -32,23 +32,22 @@ using namespace std;
 #define WINDOW_NAME1 "原始图窗口"
 #define WINDOW_NAME2 "效果图窗口"
 
-Mat sceneMat, backgroundMat;
+Mat foreMat;
+//Mat backgroundMat;
 Mat chromaticityMat, brightnessMat, localMat, spacialMat, spacialGrayMat;  //存储每步阴影检测结果
 
-/*//宽高写反了
-int sceneRGB_B[WIDTH][HEIGHT],sceneRGB_G[WIDTH][HEIGHT],sceneRGB_R[WIDTH][HEIGHT];  //前景图像的RGB分量
-int backgroundRGB_B[WIDTH][HEIGHT],backgroundRGB_G[WIDTH][HEIGHT],backgroundRGB_R[WIDTH][HEIGHT];  //背景图像的RGB分量
-double sceneNorm[WIDTH][HEIGHT],backgroundNorm[WIDTH][HEIGHT];  //前景图像和背景图像每个像素RGB分量的2范数
-double cd_B[WIDTH][HEIGHT],cd_G[WIDTH][HEIGHT],cd_R[WIDTH][HEIGHT];  //色度差的RGB分量
-double bd_B[WIDTH][HEIGHT],bd_G[WIDTH][HEIGHT],bd_R[WIDTH][HEIGHT];  //亮度差的RGB分量
-double q_B[WIDTH][HEIGHT], q_G[WIDTH][HEIGHT], q_R[WIDTH][HEIGHT]; //RGB三个分量的Q值
-*/
-int sceneRGB_B[HEIGHT][WIDTH],sceneRGB_G[HEIGHT][WIDTH],sceneRGB_R[HEIGHT][WIDTH];  //前景图像的RGB分量
+//注：Mat.rows(矩阵行数)=pic.heigt(图像高度),Mat.cols(矩阵的列数)=pic.width(图像宽度)
+int foreRGB_B[HEIGHT][WIDTH],foreRGB_G[HEIGHT][WIDTH],foreRGB_R[HEIGHT][WIDTH];  //前景图像的RGB分量
 int backgroundRGB_B[HEIGHT][WIDTH],backgroundRGB_G[HEIGHT][WIDTH],backgroundRGB_R[HEIGHT][WIDTH];  //背景图像的RGB分量
-double sceneNorm[HEIGHT][WIDTH],backgroundNorm[HEIGHT][WIDTH];  //前景图像和背景图像每个像素RGB分量的2范数
+double foreNorm[HEIGHT][WIDTH],backgroundNorm[HEIGHT][WIDTH];  //前景图像和背景图像每个像素RGB分量的2范数
 double cd_B[HEIGHT][WIDTH],cd_G[HEIGHT][WIDTH],cd_R[HEIGHT][WIDTH];  //色度差的RGB分量
 double bd_B[HEIGHT][WIDTH],bd_G[HEIGHT][WIDTH],bd_R[HEIGHT][WIDTH];  //亮度差的RGB分量
 double q_B[HEIGHT][WIDTH], q_G[HEIGHT][WIDTH], q_R[HEIGHT][WIDTH]; //RGB三个分量的Q值
+
+//记得把下面两行删了！！！！
+Mat sceneMat;
+int sceneRGB_B[HEIGHT][WIDTH],sceneRGB_G[HEIGHT][WIDTH],sceneRGB_R[HEIGHT][WIDTH];  //前景图像的RGB分量
+
 
 //色度CD
 double cd_m_B, cd_m_G, cd_m_R;  //RGB三个分量的期望
@@ -66,7 +65,6 @@ struct pixelInformation{   //结构体存放每个像素点的信息
 	int initColor_R;  //原图的RBG颜色-R
 	int revise;  //判断该像素是否被修改。0，没有被修改；1，被修改
 };
-//struct pixelInformation graph[WIDTH][HEIGHT];
 struct pixelInformation graph[HEIGHT][WIDTH];
 
 
@@ -79,6 +77,7 @@ RNG g_rng(12345);
 //vector<Vec4i> g_viHierarchy;
 void on_ThreshChange(int, void*);
 
+
 //求向量的2范数
 double norm2(int b,int g,int r)
 {
@@ -87,34 +86,127 @@ double norm2(int b,int g,int r)
 	return norm;
 }
 
+//差分法获得前景图：场景-背景=前景
+int differRGB()
+{
+	//---------------显示图像：此处可以注释掉-------------------
+	//cvNamedWindow("场景图像", CV_WINDOW_AUTOSIZE);
+	//cvNamedWindow("背景图像", CV_WINDOW_AUTOSIZE);
+	//cvShowImage("场景图像", scene);
+	//cvShowImage("背景图像", back);
+	//cvWaitKey(0);
+
+	IplImage *fore;
+	fore=cvCreateImage(cvGetSize(scene), scene->depth, scene->nChannels);  //创建前景图像
+
+	//高斯滤波，平滑图像 
+	cvSmooth(scene, scene, CV_GAUSSIAN, 3, 3);
+	cvSmooth(back, back, CV_GAUSSIAN, 3, 3);
+
+	//---------------显示图像：此处可以注释掉-------------------
+	//cvNamedWindow("高斯滤波后的场景图像", CV_WINDOW_AUTOSIZE);
+	//cvNamedWindow("高斯滤波后的背景图像", CV_WINDOW_AUTOSIZE);
+	//cvShowImage("高斯滤波后的场景图像", scene);
+	//cvShowImage("高斯滤波后的背景图像", back);
+	//cvWaitKey(0);
+
+	//cvAbsDiff():计算两个数组差的绝对值
+	cvAbsDiff(scene, back, fore);  //差分法：场景-背景=前景
+
+	uchar* foreData=(uchar *)fore->imageData;   //char *imageData:指向排列的图像数据
+	int foreStep=fore->widthStep/sizeof(uchar);  //int widthStep:排列的图像行大小，以字节为单位
+	int foreChannels=fore->nChannels;
+	uchar* sceneData=(uchar *)scene->imageData;   //char *imageData:指向排列的图像数据
+	double similar=0;
+	int threshold;
+	for(int i=0;i<fore->height;i++)
+	{
+		for(int j=0;j<fore->width;j++)
+		{
+			//计算场景图像与背景图像每个像素点的相似度，如果相似，则认为两个像素点相同，那么就将该点判定为背景（黄色），否则为前景（红色）
+			//两像素点的相似度定义：R,G,B三个分量的差值平方和
+			similar=pow(foreData[i*foreStep+j*foreChannels+0],2) + pow(foreData[i*foreStep+j*foreChannels+1],2) + pow(foreData[i*foreStep+j*foreChannels+2],2);
+			threshold=5000;  //判断相似度的阈值
+			if(similar<threshold)  //相似度小于5000，则认为两个像素点相同，那么就将该点判定为背景（黄色）
+			{ 
+				foreData[i*foreStep+j*foreChannels+0]=0;  //B分量
+				foreData[i*foreStep+j*foreChannels+1]=255;  //G分量
+				foreData[i*foreStep+j*foreChannels+2]=255;  //R分量
+			}
+			else  //否则为前景（颜色与场景相同）
+			{
+				foreData[i*foreStep+j*foreChannels+0]=sceneData[i*foreStep+j*foreChannels+0];  //B分量
+				foreData[i*foreStep+j*foreChannels+1]=sceneData[i*foreStep+j*foreChannels+1];  //G分量
+				foreData[i*foreStep+j*foreChannels+2]=sceneData[i*foreStep+j*foreChannels+2];  //R分量
+			}
+			
+		}
+	}
+	//---------------显示图像：此处可以注释掉-------------------
+	//cvNamedWindow("未经处理的foreground", CV_WINDOW_AUTOSIZE);
+	//cvShowImage("未经处理的foreground", fore);
+	//cvWaitKey(0);
+
+
+	//--------------------实际并没有采用对图片的腐蚀和膨胀---------------------------
+/*	//对前景图片进行腐蚀和膨胀处理，目的如下：
+	//1.消除噪声
+	//2.分割出独立的图像元素，在图像中连接相邻的元素
+	//3.寻找图像中的明显极大值区域或极小值区域
+	//4.求出图像的梯度
+	cvErode(fore, fore, 0, 1);  //腐蚀
+	cvNamedWindow("腐蚀foreground", CV_WINDOW_AUTOSIZE);
+	cvShowImage("腐蚀foreground", fore); 
+	cvWaitKey(0);
+
+	//个人感觉：仅用腐蚀效果会更好
+	cvDilate(fore, fore, 0, 1);   //膨胀
+	cvNamedWindow("腐蚀+膨胀foreground", CV_WINDOW_AUTOSIZE);
+	cvShowImage("腐蚀+膨胀foreground", fore);
+	cvWaitKey(0);	
+*/
+
+	foreMat=cvarrToMat(fore,true);  //类型转换
+	//----------------------保存图片，可以注释！！！------------------------
+	//string forePath="F:\\Code\\Projection Line in Shadow\\Data\\Foreground\\";  //前景路径
+	//imwrite((forePath+picName+"_fore.bmp").data(), foreMat);
+
+	cvReleaseImage(&scene);
+	cvReleaseImage(&back);
+	cvReleaseImage(&fore);
+
+	return 0;
+}
+
 //计算前景图像与背景图像的色度差
 //假设输入的前景图片已经处理为背景是黄色，前景非黄色
 int chromaticityDiffer()
 {
-	sceneMat=imread("F:\\Code\\Shadow Detection\\Data\\Foreground\\20170228111043_fore.jpg");  //最开始提取到的前景图像
-	backgroundMat=imread("F:\\Code\\Shadow Detection\\Data\\Background\\20170228111043_back.jpg");  //背景图像
+	//foreMat=imread((forePath+picName+"_fore.bmp").data());  //最开始提取到的前景图像
+	//backgroundMat=imread((backPath+picName+"_back.jpg").data());  //背景图像
 
-	namedWindow("前景图");
-	imshow("前景图", sceneMat);
-	waitKey(0);
+	//-----------------------显示图片，可以注释----------------------
+	//namedWindow("前景图");
+	//imshow("前景图", foreMat);
+	//waitKey(0);
 
 	//遍历前景图像的每个像素，注：RGB三个分量都要计算
-	for(int i=0;i<sceneMat.rows;i++)
+	for(int i=0;i<foreMat.rows;i++)
 	{
-		const Vec3b* scenePoint=sceneMat.ptr <Vec3b>(i);  //Vec3b是一个三元向量的数据结构，正好能够表示RGB的三个分量
-		for(int j=0;j<sceneMat.cols;j++)
+		const Vec3b* forePoint=foreMat.ptr <Vec3b>(i);  //Vec3b是一个三元向量的数据结构，正好能够表示RGB的三个分量
+		for(int j=0;j<foreMat.cols;j++)
 		{
-			Vec3b intensity=*(scenePoint+j);
-			sceneRGB_B[i][j]=intensity[0];
-			sceneRGB_G[i][j]=intensity[1];
-			sceneRGB_R[i][j]=intensity[2];
+			Vec3b intensity=*(forePoint+j);
+			foreRGB_B[i][j]=intensity[0];
+			foreRGB_G[i][j]=intensity[1];
+			foreRGB_R[i][j]=intensity[2];
 
 			//初始化结构体像素类别，初始化认为每个像素都是背景
 			graph[i][j].category=0;
 			//初始化结构体颜色，颜色同前景图像
-			graph[i][j].initColor_B=sceneRGB_B[i][j];
-			graph[i][j].initColor_G=sceneRGB_G[i][j];
-			graph[i][j].initColor_R=sceneRGB_R[i][j];
+			graph[i][j].initColor_B=foreRGB_B[i][j];
+			graph[i][j].initColor_G=foreRGB_G[i][j];
+			graph[i][j].initColor_R=foreRGB_R[i][j];
 		}
 	}
 
@@ -136,54 +228,59 @@ int chromaticityDiffer()
 	{
 		for(int j=0;j<backgroundMat.cols;j++)
 		{
-			sceneNorm[i][j]=norm2(sceneRGB_B[i][j],sceneRGB_G[i][j],sceneRGB_R[i][j]);
+			foreNorm[i][j]=norm2(foreRGB_B[i][j],foreRGB_G[i][j],foreRGB_R[i][j]);
 			backgroundNorm[i][j]=norm2(backgroundRGB_B[i][j],backgroundRGB_G[i][j],backgroundRGB_R[i][j]);
 		}
 	}
 
 	//计算前景图像与背景图像每个像素的色度差，注：RGB三个分量都要计算
-	//注：可能会出现分母为零的情况！！！！一定要判断！！！！如果分母为零，则将其设为无穷小！！！！
-	for(int i=0;i<sceneMat.rows;i++)
+	for(int i=0;i<foreMat.rows;i++)
 	{
-		for(int j=0;j<sceneMat.cols;j++)
+		for(int j=0;j<foreMat.cols;j++)
 		{
-			if(sceneNorm[i][j]==0)
-				sceneNorm[i][j]=INT_MIN;
+			//注：可能会出现分母为零的情况！！！！一定要判断！！！！如果分母为零，则将其设为无穷小！！！！
+			if(foreNorm[i][j]==0)
+				foreNorm[i][j]=INT_MIN;
 			if(backgroundNorm[i][j]==0)
 				backgroundNorm[i][j]=INT_MIN;
 
-			cd_B[i][j]=sceneRGB_B[i][j]/sceneNorm[i][j]-backgroundRGB_B[i][j]/backgroundNorm[i][j];
-			cd_G[i][j]=sceneRGB_G[i][j]/sceneNorm[i][j]-backgroundRGB_G[i][j]/backgroundNorm[i][j];
-			cd_R[i][j]=sceneRGB_R[i][j]/sceneNorm[i][j]-backgroundRGB_R[i][j]/backgroundNorm[i][j];
+			cd_B[i][j]=foreRGB_B[i][j]/foreNorm[i][j]-backgroundRGB_B[i][j]/backgroundNorm[i][j];
+			cd_G[i][j]=foreRGB_G[i][j]/foreNorm[i][j]-backgroundRGB_G[i][j]/backgroundNorm[i][j];
+			cd_R[i][j]=foreRGB_R[i][j]/foreNorm[i][j]-backgroundRGB_R[i][j]/backgroundNorm[i][j];
 		}
 	}
 
-	//将每个像素的CD值保存到txt文件中
-	//B分量
-	ofstream out_cdB("F:\\Code\\Shadow Detection\\Data\\Chromaticity Difference\\Chromaticity Statistics\\cd_B.txt");  //打开文件
-	for(int i=0;i<sceneMat.rows;i++)
+	//----------------------将每个像素的CD值保存到txt文件中--------------------------
+	//-------------------数据的保存是为了便于以后分析数据，可以注释-----------------------
+/*	//B分量
+	string cdDataPath="F:\\Code\\Projection Line in Shadow\\Data\\Chromaticity Differ\\Chromaticity Statistics\\";
+	string cdBname="cd_B.txt";
+	string cdGname="cd_G.txt";
+	string cdRname="cd_R.txt";
+	ofstream out_cdB((cdDataPath+cdBname).data());  //打开文件
+	for(int i=0;i<foreMat.rows;i++)
 	{
-		for(int j=0;j<sceneMat.cols;j++)
+		for(int j=0;j<foreMat.cols;j++)
 		{
 			out_cdB<<cd_B[i][j]<<"\t";  //将每个元素写入文件，以Tab分隔   注：如果结果出现了-1.#IND则表示很小，不确定
 		}
 		out_cdB<<endl;   //每行输出结束，添加换行
 	}
 	//G分量
-	ofstream out_cdG("F:\\Code\\Shadow Detection\\Data\\Chromaticity Difference\\Chromaticity Statistics\\cd_G.txt");  //打开文件
-	for(int i=0;i<sceneMat.rows;i++)
+	ofstream out_cdG((cdDataPath+cdGname).data());  //打开文件
+	for(int i=0;i<foreMat.rows;i++)
 	{
-		for(int j=0;j<sceneMat.cols;j++)
+		for(int j=0;j<foreMat.cols;j++)
 		{
 			out_cdG<<cd_G[i][j]<<"\t";  //将每个元素写入文件，以Tab分隔   注：如果结果出现了-1.#IND则表示很小，不确定
 		}
 		out_cdG<<endl;   //每行输出结束，添加换行
 	}
 	//R分量
-	ofstream out_cdR("F:\\Code\\Shadow Detection\\Data\\Chromaticity Difference\\Chromaticity Statistics\\cd_R.txt");  //打开文件
-	for(int i=0;i<sceneMat.rows;i++)
+	ofstream out_cdR((cdDataPath+cdRname).data());  //打开文件
+	for(int i=0;i<foreMat.rows;i++)
 	{
-		for(int j=0;j<sceneMat.cols;j++)
+		for(int j=0;j<foreMat.cols;j++)
 		{
 			out_cdR<<cd_R[i][j]<<"\t";  //将每个元素写入文件，以Tab分隔   注：如果结果出现了-1.#IND则表示很小，不确定
 		}
@@ -192,16 +289,16 @@ int chromaticityDiffer()
 	out_cdB.close();
 	out_cdG.close();
 	out_cdR.close();
-
+*/
 
 	//计算CD的期望
 	int cdNum_B=0, cdNum_G=0, cdNum_R=0; //RGB三个分量符合区间为[-0.2,0.2]的CD的个数
 	cd_m_B=0;
 	cd_m_G=0;
 	cd_m_R=0;
-	for(int i=0;i<sceneMat.rows;i++)
+	for(int i=0;i<foreMat.rows;i++)
 	{
-		for(int j=0;j<sceneMat.cols;j++)
+		for(int j=0;j<foreMat.cols;j++)
 		{
 			if(cd_B[i][j]>=-0.2 && cd_B[i][j]<=0.2)   //B分量：保留符合区间为[-0.2,0.2]的CD
 			{
@@ -228,9 +325,9 @@ int chromaticityDiffer()
 	cd_variance_B=0;
 	cd_variance_G=0;
 	cd_variance_R=0;
-	for(int i=0;i<sceneMat.rows;i++)
+	for(int i=0;i<foreMat.rows;i++)
 	{
-		for(int j=0;j<sceneMat.cols;j++)
+		for(int j=0;j<foreMat.cols;j++)
 		{
 			if(cd_B[i][j]>=-0.2 && cd_B[i][j]<=0.2)   //B分量：保留符合区间为[-0.2,0.2]的CD
 			{
@@ -258,7 +355,7 @@ int chromaticityDiffer()
 	cd_thresholdH_R= cd_m_R + 1.96*cd_variance_R;  //R分量
 	cd_thresholdL_R= cd_m_R - 1.96*cd_variance_R;
 
-	cout<<"--------------------CD计算结果----------------------"<<endl;
+/*	cout<<"--------------------CD计算结果----------------------"<<endl;
 	cout<<"[-0.2,0.2]cdNum_B："<<cdNum_B<<endl;
 	cout<<"[-0.2,0.2]cdNum_G："<<cdNum_G<<endl;
 	cout<<"[-0.2,0.2]cdNum_R："<<cdNum_R<<endl;
@@ -271,8 +368,9 @@ int chromaticityDiffer()
 	cout<<"B的分类阈值："<<cd_thresholdL_B<<"\t"<<cd_thresholdH_B<<endl;
 	cout<<"G的分类阈值："<<cd_thresholdL_G<<"\t"<<cd_thresholdH_G<<endl;
 	cout<<"R的分类阈值："<<cd_thresholdL_R<<"\t"<<cd_thresholdH_R<<endl;
+	*/
 
-	chromaticityMat=sceneMat.clone();   //深拷贝：chromaticityMat拷贝了sceneMat，形成一个新的图像矩阵，两者相互没有影响	
+	chromaticityMat=foreMat.clone();   //深拷贝：chromaticityMat拷贝了foreMat，形成一个新的图像矩阵，两者相互没有影响	
 	chromaticityShadowNum=0;  //色度差检测到的阴影像素数
 	//计算BD的期望
 	bd_m_B=0;
@@ -334,12 +432,12 @@ int chromaticityDiffer()
 							backgroundRGB_G[i][j]=INT_MIN;
 						if(backgroundRGB_R[i][j]==0)
 							backgroundRGB_R[i][j]=INT_MIN;
-						bd_B[i][j]=(double)sceneRGB_B[i][j]/backgroundRGB_B[i][j];
-						bd_G[i][j]=(double)sceneRGB_G[i][j]/backgroundRGB_G[i][j];
-						bd_R[i][j]=(double)sceneRGB_R[i][j]/backgroundRGB_R[i][j];
-						bd_m_B=bd_m_B+bd_B[i][j];  //B分量
-						bd_m_G=bd_m_G+bd_G[i][j];  //G分量
-						bd_m_R=bd_m_R+bd_R[i][j];  //R分量
+						bd_B[i][j]=(double)foreRGB_B[i][j]/backgroundRGB_B[i][j];
+						bd_G[i][j]=(double)foreRGB_G[i][j]/backgroundRGB_G[i][j];
+						bd_R[i][j]=(double)foreRGB_R[i][j]/backgroundRGB_R[i][j];
+						bd_m_B=bd_m_B+bd_B[i][j];  //B分量期望
+						bd_m_G=bd_m_G+bd_G[i][j];  //G分量期望
+						bd_m_R=bd_m_R+bd_R[i][j];  //R分量期望
 					}  
 					else
 					{
@@ -359,41 +457,24 @@ int chromaticityDiffer()
 
 		}
 	}
-	cout<<"色度差检测到的阴影像素数："<<chromaticityShadowNum<<endl;
+	//cout<<"色度差检测到的阴影像素数："<<chromaticityShadowNum<<endl;
 
-	/*	//测试struct存储的阴影信息是否与色度差检测结果一致
-	int testNum=0;
-	for(int i=0;i<HEIGHT;i++)
-	{
-	for(int j=0;j<WIDTH;j++)
-	{	
-	if(graph[i][j].category==2)
-	testNum++;
-	}
-	}
-	cout<<"结构体中存储的阴影数为:"<<testNum<<endl;
+	//-----------------------显示图片，可以注释----------------------
+	//namedWindow("色度差检测结果",WINDOW_NORMAL);
+	//imshow("色度差检测结果", chromaticityMat);
+	//waitKey(0);
+	//destroyWindow("前景图");
+	//destroyWindow("色度差检测结果");
 
-	cout<<"row="<<sceneMat.rows<<endl;
-	cout<<"col="<<sceneMat.cols<<endl;
-	*/
-
-	namedWindow("色度差检测结果",WINDOW_NORMAL);
-	imshow("色度差检测结果", chromaticityMat);
-	waitKey(0);
-	destroyWindow("前景图");
-	destroyWindow("色度差检测结果");
-
-	//保存图片
-	//保存为bmp格式，图片不会有压缩；保存为jpg格式，图片会有压缩，即使把CV_IMWRITE_JPEG_QUALITY调整为100也不行
-	vector<int>imwriteJPGquality;
-	imwriteJPGquality.push_back(CV_IMWRITE_JPEG_QUALITY);   //JPG格式图片的质量
-	imwriteJPGquality.push_back(100);
-	//imwrite("F:\\Code\\Shadow Detection\\Data\\Chromaticity Difference\\Chromaticity Differ Result\\201702281110043_chromaticity.jpg", chromaticityMat);
-	imwrite("F:\\Code\\Shadow Detection\\Data\\Chromaticity Difference\\Chromaticity Differ Result\\201702281110043_chromaticity.bmp", chromaticityMat);
+	//-----------------------------保存图片,因为现在为各模块的整合，所以不需要保存中间步骤的图片，要注释掉！！！！-------------------------
+	//保存为bmp格式，图片不会有压缩；保存为jpg格式，图片会有压缩
+	//string chromaticityPicPath;
+	//chromaticityPicPath="F:\\Code\\Projection Line in Shadow\\Data\\Chromaticity Differ\\Chromaticity Differ Result\\";
+	//imwrite((chromaticityPicPath+picName+"_chromaticity.bmp").data(), chromaticityMat);
 	return 0;
 }
 
-
+/*
 //计算前景图像与背景图像的亮度差
 //输入的前景图片已经处理为背景是黄色，阴影绿色，物体红色
 int brightnessDiffer()
@@ -602,10 +683,9 @@ int localRelation()
 					q_G[i][j]= pow((bd_G[i][j-1]-bd_m_G)/bd_variance_G,2)+ pow((bd_B[i+1][j]-bd_m_G)/bd_variance_G,2)+ pow((bd_B[i][j+1]-bd_m_G)/bd_variance_G,2)+ pow((bd_B[i-1][j]-bd_m_G)/bd_variance_G,2);
 					q_R[i][j]= pow((bd_B[i][j-1]-bd_m_R)/bd_variance_R,2)+ pow((bd_B[i+1][j]-bd_m_R)/bd_variance_R,2)+ pow((bd_R[i][j+1]-bd_m_R)/bd_variance_R,2)+ pow((bd_B[i-1][j]-bd_m_R)/bd_variance_R,2);
 
-					/*//输出Q值
-					cout<<"q_B="<<q_B[i][j]<<"\t"<<"q_G="<<q_G[i][j]<<"\t"<<"q_R="<<q_R[i][j]<<endl;
-					notBoarder++;  //非边缘阴影像素个数
-					*/
+					//输出Q值
+					//cout<<"q_B="<<q_B[i][j]<<"\t"<<"q_G="<<q_G[i][j]<<"\t"<<"q_R="<<q_R[i][j]<<endl;
+					//notBoarder++;  //非边缘阴影像素个数
 				}
 			}
 		}
@@ -715,12 +795,11 @@ int spatialAjustment()
 
 
 	//创建滑动条来控制阈值
-	/*  第一个参数：滑动条名称
-	第二个参数：窗口名称
-	第三个参数：当滑动条被拖到时，opencv会自动将当前位置所代表的值传递给指针指向的整数
-	第四个参数：滑动条所能到达的最大值
-	第五个参数：可选的回调函数,这里为自定义的阈值函数
-	*/
+	//第一个参数：滑动条名称
+	//第二个参数：窗口名称
+	//第三个参数：当滑动条被拖到时，opencv会自动将当前位置所代表的值传递给指针指向的整数
+	//第四个参数：滑动条所能到达的最大值
+	//第五个参数：可选的回调函数,这里为自定义的阈值函数
 	createTrackbar("阈值", WINDOW_NAME1, &g_nThresh, g_maxThresh, on_ThreshChange);
 	on_ThreshChange(0,0);   //初始化自定义的阈值函数
 
@@ -745,27 +824,25 @@ void on_ThreshChange(int, void*)
 	vector<Vec4i>hierarchy;
 
 	//对图像进行二值化
-	/*  threshold函数：遍历灰度图，将图像信息二值化，处理过后的图片只有两种色值
-	第一个参数：输入，必须为单通道，8bit或32bit浮点类型的Mat即可
-	第二个参数：存放输出结果，且与第一个参数有相同的尺寸和类型
-	第三个参数：阈值的具体值
-	第四个参数：maxvalue，当第五个参数取THRESH_BINARY或THRESH_BINARY_INV类型时的最大值（二值化：0黑，255白）
-	第五个参数：阈值类型：THRESH_BINARY 当前点大于阈值时，取maxvalue（即第四个参数），否则设置为0
-	*/
+	//  threshold函数：遍历灰度图，将图像信息二值化，处理过后的图片只有两种色值
+	//第一个参数：输入，必须为单通道，8bit或32bit浮点类型的Mat即可
+	//第二个参数：存放输出结果，且与第一个参数有相同的尺寸和类型
+	//第三个参数：阈值的具体值
+	//第四个参数：maxvalue，当第五个参数取THRESH_BINARY或THRESH_BINARY_INV类型时的最大值（二值化：0黑，255白）
+	//第五个参数：阈值类型：THRESH_BINARY 当前点大于阈值时，取maxvalue（即第四个参数），否则设置为0
 	threshold(spacialGrayMat, threshold_output, g_nThresh, 255, THRESH_BINARY);
 
 	
 	//寻找轮廓
-	/*  第一个参数：输入图像，8bit的单通道二值图像
+	//  第一个参数：输入图像，8bit的单通道二值图像
 	contours：检测到的轮廓，是一个向量，每个元素都是一个轮廓。因此，这个向量的每个元素都是一个向量，即vector<vector<Point>>contours
 	hierarchy:各个轮廓的继承关系。hierarchy也是一个向量，长度与contours相等，每个元素和contours的元素对应。
 	hierarchy的每个元素是一个包含四个整型数的向量，即vector<Vec4i>hierarchy
 	hierarchy[i][0],hierarchy[i][1],hierarchy[i][2],hierarchy[i][3]分别表示第i条轮廓（contours[i])的下一条，前一条，包含的第一条子轮廓和包含它的父轮廓
-	第四个参数：检测轮廓的方法，共有四种。CV_RETR_TREE检测所有轮廓，并建立所有的继承（包含）关系。
-	第五个参数：表示一条轮廓的方法。CV_CHAIN_APPROX_SIMPLE只存储水平、垂直、对角直线的起始点。
-	第六个参数：每一个轮廓点的偏移量，当轮廓是从图形ROI中（感兴趣区）提取出来的时候，使用偏移量有用，因为可以从整个图像上下文来对轮廓做分析
-	例如，想从图像的(100,0)开始进行轮廓检测，就传入（100，0）
-	*/
+	//第四个参数：检测轮廓的方法，共有四种。CV_RETR_TREE检测所有轮廓，并建立所有的继承（包含）关系。
+	//第五个参数：表示一条轮廓的方法。CV_CHAIN_APPROX_SIMPLE只存储水平、垂直、对角直线的起始点。
+	//第六个参数：每一个轮廓点的偏移量，当轮廓是从图形ROI中（感兴趣区）提取出来的时候，使用偏移量有用，因为可以从整个图像上下文来对轮廓做分析
+	//例如，想从图像的(100,0)开始进行轮廓检测，就传入（100，0）
 	findContours(threshold_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
 
 	//对每个轮廓计算其凸包
@@ -773,10 +850,9 @@ void on_ThreshChange(int, void*)
 	vector<vector<Point>>hull(contours.size());
 	for(int i=0; i<contours.size(); i++)
 	{
-		/*  第一个参数：要求的凸包的点集
-		第二个参数：输出的凸包点
-		第三个参数：bool变量，表示求得的凸包是顺时针还是逆时针方向。true是顺时针
-		*/
+		// 第一个参数：要求的凸包的点集
+		//第二个参数：输出的凸包点
+		//第三个参数：bool变量，表示求得的凸包是顺时针还是逆时针方向。true是顺时针
 		convexHull(Mat(contours[i]), hull[i], false);
 	}
 
@@ -788,24 +864,22 @@ void on_ThreshChange(int, void*)
 		//uniform：返回指定范围的随机数
 		Scalar color=Scalar(g_rng.uniform(0,255), g_rng.uniform(0,255), g_rng.uniform(0,255));
 
-		/*drawContours：画出图像的轮廓
-		第一个参数：目标图像
-		第二个参数：输入的轮廓组，每一组轮廓由点vector构成
-		第三个参数：指明画第几个轮廓
-		第四个参数：轮廓的颜色
-		第五个参数：轮廓的线宽。如果为负值或者CV_FILLED表示填充轮廓内部
-		第六个参数：线条的类型
-		第七个参数：轮廓结构信息
-		第八个参数：MAX_LEVEL，绘制轮廓的最大等级。如果为0，绘制单独的轮廓；如果为1，绘制轮廓及其后的相同级别的轮廓。如果为2，所有的轮廓。
-		第九个参数：按照给出的偏移量移动每一个轮廓点坐标。当轮廓是从某些感兴趣区域（ROI）中提取时，需要考虑ROI偏移量，会用到这个参数
-		*/
+		//drawContours：画出图像的轮廓
+		//第一个参数：目标图像
+		//第二个参数：输入的轮廓组，每一组轮廓由点vector构成
+		//第三个参数：指明画第几个轮廓
+		//第四个参数：轮廓的颜色
+		//第五个参数：轮廓的线宽。如果为负值或者CV_FILLED表示填充轮廓内部
+		//第六个参数：线条的类型
+		//第七个参数：轮廓结构信息
+		//第八个参数：MAX_LEVEL，绘制轮廓的最大等级。如果为0，绘制单独的轮廓；如果为1，绘制轮廓及其后的相同级别的轮廓。如果为2，所有的轮廓。
+		//第九个参数：按照给出的偏移量移动每一个轮廓点坐标。当轮廓是从某些感兴趣区域（ROI）中提取时，需要考虑ROI偏移量，会用到这个参数
 		drawContours(drawing, contours, i, color, 1, 8, vector<Vec4i>(), 0, Point());
 		//drawContours(drawing, hull, i, color, 1, 8, vector<Vec4i>(), 0, Point());
 
-		/*		//计算每个轮廓的面积
-		double area = fabs(contourArea(contours[i], true));
-		cout<<"第"<<i<<"个轮廓的面积为："<<area<<endl;
-		*/
+		//计算每个轮廓的面积
+		//double area = fabs(contourArea(contours[i], true));
+		//cout<<"第"<<i<<"个轮廓的面积为："<<area<<endl;
 	}
 
 	//把结果显示在窗体
@@ -875,9 +949,8 @@ void fillSmallDomain()
 	cvThreshold(img, img, 100, 200, CV_THRESH_BINARY);
 
 	//找到二值图像中的轮廓
-	/*  CV_RETR_LIST：提取所有轮廓，并放置在list中
-	CV_CHAIN_APPROX_NONE：将所有点由链码形式转化为点序列形式
-	*/
+	// CV_RETR_LIST：提取所有轮廓，并放置在list中
+	//CV_CHAIN_APPROX_NONE：将所有点由链码形式转化为点序列形式
 	cvFindContours(img, storage, &contour, sizeof(CvContour), CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
 	cvZero(dst);  //清空数组
 
@@ -1222,13 +1295,13 @@ void fillSmallDomain()
 	//保存进一步检测的图片
 	imwrite("F:\\Code\\Shadow Detection\\Data\\Spacial Improved\\20170228111043_brightness+local+spacial.bmp", spacialMat);
 }
-
+*/
 
 //阴影检测算法
 int shadowDetection()
 {
 	//step1. 色度差阴影检测
-//	chromaticityDiffer();
+	chromaticityDiffer();
 
 	//step2. 亮度差阴影检测
 	//注：这个函数要用到chromaticityDiffer()
@@ -1241,7 +1314,7 @@ int shadowDetection()
 //	spatialAjustment();  //手动选取阈值
 
 	//step5.填充最小连通域
-	fillSmallDomain();   //填充最小连通域
+//	fillSmallDomain();   //填充最小连通域
 
 	return 0;
 }

@@ -18,24 +18,14 @@ Function: 差分法，提取图片前景，得到的前景图片是RGB图
 #include <highgui.h>
 #include <math.h>
 #include <Windows.h>
-#include "differRGB.h"
+//#include "differRGB.h"  //注意：因为differRGB.h已经用extern声明了全局变量，所以不需要再#include "differRGB.h"
+#include "variable.h"
 
 using namespace cv;
 using namespace std;
 
 int differRGB()
 {
-	IplImage *scene,*back,*fore;
-	string scenePath, backPath, picName;
-
-	scenePath="F:\\Code\\Projection Line in Shadow\\Data\\Scene\\";
-	backPath="F:\\Code\\Projection Line in Shadow\\Data\\Background\\";
-	picName="20170228111043";
-	
-	//string转char* : char *p=string.data()
-	scene=cvLoadImage((scenePath+picName+"_scene.jpg").data()); //载入场景图像
-	back=cvLoadImage((backPath+picName+"_back.jpg").data());  //背景图像
-
 	//---------------显示图像：此处可以注释掉-------------------
 	//cvNamedWindow("场景图像", CV_WINDOW_AUTOSIZE);
 	//cvNamedWindow("背景图像", CV_WINDOW_AUTOSIZE);
@@ -43,7 +33,8 @@ int differRGB()
 	//cvShowImage("背景图像", back);
 	//cvWaitKey(0);
 
-	fore=cvCreateImage(cvGetSize(scene), scene->depth, scene->nChannels);  //创建前景图像
+	//IplImage *fore;
+	IplImage *fore=cvCreateImage(cvGetSize(scene), scene->depth, scene->nChannels);  //创建前景图像
 
 	//高斯滤波，平滑图像 
 	cvSmooth(scene, scene, CV_GAUSSIAN, 3, 3);
@@ -95,24 +86,24 @@ int differRGB()
 
 
 	//--------------------实际并没有采用对图片的腐蚀和膨胀---------------------------
-	//对前景图片进行腐蚀和膨胀处理，目的如下：
+/*	//对前景图片进行腐蚀和膨胀处理，目的如下：
 	//1.消除噪声
 	//2.分割出独立的图像元素，在图像中连接相邻的元素
 	//3.寻找图像中的明显极大值区域或极小值区域
 	//4.求出图像的梯度
-	//cvErode(fore, fore, 0, 1);  //腐蚀
-	//cvNamedWindow("腐蚀foreground", CV_WINDOW_AUTOSIZE);
-	//cvShowImage("腐蚀foreground", fore); 
-	//cvWaitKey(0);
+	cvErode(fore, fore, 0, 1);  //腐蚀
+	cvNamedWindow("腐蚀foreground", CV_WINDOW_AUTOSIZE);
+	cvShowImage("腐蚀foreground", fore); 
+	cvWaitKey(0);
 
 	//个人感觉：仅用腐蚀效果会更好
-	//cvDilate(fore, fore, 0, 1);   //膨胀
-	//cvNamedWindow("腐蚀+膨胀foreground", CV_WINDOW_AUTOSIZE);
-	//cvShowImage("腐蚀+膨胀foreground", fore);
-	//cvWaitKey(0);	
+	cvDilate(fore, fore, 0, 1);   //膨胀
+	cvNamedWindow("腐蚀+膨胀foreground", CV_WINDOW_AUTOSIZE);
+	cvShowImage("腐蚀+膨胀foreground", fore);
+	cvWaitKey(0);	
+*/
 
-	string forePath;
-	forePath="F:\\Code\\Projection Line in Shadow\\Data\\Foreground\\";
+	//Mat foreMat=cvarrToMat(fore);
 	cvSaveImage((forePath+picName+"_fore.bmp").data(), fore);  //保存前景图片 
 
 	cvReleaseImage(&scene);

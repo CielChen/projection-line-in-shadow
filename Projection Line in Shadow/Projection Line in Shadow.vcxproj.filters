@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="differRGB.h">
+    <ClInclude Include="variable.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="shadow_detection.h">
@@ -23,10 +23,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="differRGB.cpp">
+    <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="variable.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="shadow_detection.cpp">
