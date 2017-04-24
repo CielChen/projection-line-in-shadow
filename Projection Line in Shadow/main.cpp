@@ -5,7 +5,6 @@
 #include <fstream>
 #include <string>
 #include "variable.h"
-#include "differRGB.h"
 #include "shadow_detection.h"
 using namespace cv;
 using namespace std;

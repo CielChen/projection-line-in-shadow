@@ -18,7 +18,6 @@ Function: ÒõÓ°¼ì²â
 #include <cxcore.h>
 #include <highgui.h>
 #include "variable.h"
-//#include "differRGB.h"
 #include "shadow_detection.h"
 using namespace cv;
 using namespace std;
@@ -33,7 +32,6 @@ using namespace std;
 #define WINDOW_NAME2 "Ğ§¹ûÍ¼´°¿Ú"
 
 Mat foreMat;
-//Mat backgroundMat;
 Mat chromaticityMat, brightnessMat, localMat, spacialMat, spacialGrayMat;  //´æ´¢Ã¿²½ÒõÓ°¼ì²â½á¹û
 
 //×¢£ºMat.rows(¾ØÕóĞĞÊı)=pic.heigt(Í¼Ïñ¸ß¶È),Mat.cols(¾ØÕóµÄÁĞÊı)=pic.width(Í¼Ïñ¿í¶È)
@@ -43,11 +41,6 @@ double foreNorm[HEIGHT][WIDTH],backgroundNorm[HEIGHT][WIDTH];  //Ç°¾°Í¼ÏñºÍ±³¾°Í
 double cd_B[HEIGHT][WIDTH],cd_G[HEIGHT][WIDTH],cd_R[HEIGHT][WIDTH];  //É«¶È²îµÄRGB·ÖÁ¿
 double bd_B[HEIGHT][WIDTH],bd_G[HEIGHT][WIDTH],bd_R[HEIGHT][WIDTH];  //ÁÁ¶È²îµÄRGB·ÖÁ¿
 double q_B[HEIGHT][WIDTH], q_G[HEIGHT][WIDTH], q_R[HEIGHT][WIDTH]; //RGBÈı¸ö·ÖÁ¿µÄQÖµ
-
-//¼ÇµÃ°ÑÏÂÃæÁ½ĞĞÉ¾ÁË£¡£¡£¡£¡
-Mat sceneMat;
-int sceneRGB_B[HEIGHT][WIDTH],sceneRGB_G[HEIGHT][WIDTH],sceneRGB_R[HEIGHT][WIDTH];  //Ç°¾°Í¼ÏñµÄRGB·ÖÁ¿
-
 
 //É«¶ÈCD
 double cd_m_B, cd_m_G, cd_m_R;  //RGBÈı¸ö·ÖÁ¿µÄÆÚÍû
@@ -182,9 +175,6 @@ int differRGB()
 //¼ÙÉèÊäÈëµÄÇ°¾°Í¼Æ¬ÒÑ¾­´¦ÀíÎª±³¾°ÊÇ»ÆÉ«£¬Ç°¾°·Ç»ÆÉ«
 int chromaticityDiffer()
 {
-	//foreMat=imread((forePath+picName+"_fore.bmp").data());  //×î¿ªÊ¼ÌáÈ¡µ½µÄÇ°¾°Í¼Ïñ
-	//backgroundMat=imread((backPath+picName+"_back.jpg").data());  //±³¾°Í¼Ïñ
-
 	//-----------------------ÏÔÊ¾Í¼Æ¬£¬¿ÉÒÔ×¢ÊÍ----------------------
 	//namedWindow("Ç°¾°Í¼");
 	//imshow("Ç°¾°Í¼", foreMat);
@@ -391,8 +381,9 @@ int chromaticityDiffer()
 	{
 		for(int j=0;j<chromaticityMat.cols;j++)
 		{		
-			//»ÆÉ«ÊÇ±³¾°:ÔÊĞíÏñËØÓĞÎó²î
-			if( abs(chromaticityMat.at<Vec3b>(i,j)[0]-0)<=30 && abs(chromaticityMat.at<Vec3b>(i,j)[1]-255)<=30 && abs(chromaticityMat.at<Vec3b>(i,j)[2]-255)<=30 )
+			//»ÆÉ«ÊÇ±³¾°:Ö®Ç°ÔÊĞíÏñËØÓĞÎó²î£¬ÏÖÔÚĞŞ¸ÄÎª¾ÍÊÇÅĞ¶ÏÊÇ²»ÊÇ»ÆÉ«£¬¼´BGR=£¨0£¬255£¬255£©
+			//if( abs(chromaticityMat.at<Vec3b>(i,j)[0]-0)<=30 && abs(chromaticityMat.at<Vec3b>(i,j)[1]-255)<=30 && abs(chromaticityMat.at<Vec3b>(i,j)[2]-255)<=30 )
+			if( chromaticityMat.at<Vec3b>(i,j)[0]==0 && chromaticityMat.at<Vec3b>(i,j)[1]==255 && chromaticityMat.at<Vec3b>(i,j)[2]==255 )
 				continue;  
 			else
 			{
@@ -474,38 +465,43 @@ int chromaticityDiffer()
 	return 0;
 }
 
-/*
+
 //¼ÆËãÇ°¾°Í¼ÏñÓë±³¾°Í¼ÏñµÄÁÁ¶È²î
 //ÊäÈëµÄÇ°¾°Í¼Æ¬ÒÑ¾­´¦ÀíÎª±³¾°ÊÇ»ÆÉ«£¬ÒõÓ°ÂÌÉ«£¬ÎïÌåºìÉ«
 int brightnessDiffer()
 {
 	//°´ÕÕÂÛÎÄ£¬Ö»¶ÔÉ«¶È²î¼ì²âµ½µÄÒõÓ°¼ÌĞøÉ¸Ñ¡
 	//½«Ã¿¸öÏñËØµÄBDÖµ±£´æµ½txtÎÄ¼şÖĞ
+	//-------------------Êı¾İµÄ±£´æÊÇÎªÁË±ãÓÚÒÔºó·ÖÎöÊı¾İ£¬¿ÉÒÔ×¢ÊÍ-----------------------
+/*	string bdDataPath="F:\\Code\\Projection Line in Shadow\\Data\\Brightness Differ\\Brightness Statistics\\";
+	string bdBname="bd_B.txt";
+	string bdGname="bd_G.txt";
+	string bdRname="bd_R.txt";
 	//B·ÖÁ¿
-	ofstream out_bdB("F:\\Code\\Shadow Detection\\Data\\Brightness Difference\\Brightness Statistics\\bd_B.txt");  //´ò¿ªÎÄ¼ş
-	for(int i=0;i<sceneMat.rows;i++)
+	ofstream out_bdB((bdDataPath+bdBname).data());  //´ò¿ªÎÄ¼ş
+	for(int i=0;i<chromaticityMat.rows;i++)
 	{
-		for(int j=0;j<sceneMat.cols;j++)
+		for(int j=0;j<chromaticityMat.cols;j++)
 		{
 			out_bdB<<bd_B[i][j]<<"\t";  //½«Ã¿¸öÔªËØĞ´ÈëÎÄ¼ş£¬ÒÔTab·Ö¸ô   ×¢£ºÈç¹û½á¹û³öÏÖÁË-1.#INDÔò±íÊ¾ºÜĞ¡£¬²»È·¶¨
 		}
 		out_bdB<<endl;   //Ã¿ĞĞÊä³ö½áÊø£¬Ìí¼Ó»»ĞĞ
 	}
 	//G·ÖÁ¿
-	ofstream out_bdG("F:\\Code\\Shadow Detection\\Data\\Brightness Difference\\Brightness Statistics\\bd_G.txt");  //´ò¿ªÎÄ¼ş
-	for(int i=0;i<sceneMat.rows;i++)
+	ofstream out_bdG((bdDataPath+bdGname).data());  //´ò¿ªÎÄ¼ş
+	for(int i=0;i<chromaticityMat.rows;i++)
 	{
-		for(int j=0;j<sceneMat.cols;j++)
+		for(int j=0;j<chromaticityMat.cols;j++)
 		{
 			out_bdG<<bd_G[i][j]<<"\t";  //½«Ã¿¸öÔªËØĞ´ÈëÎÄ¼ş£¬ÒÔTab·Ö¸ô   ×¢£ºÈç¹û½á¹û³öÏÖÁË-1.#INDÔò±íÊ¾ºÜĞ¡£¬²»È·¶¨
 		}
 		out_bdG<<endl;   //Ã¿ĞĞÊä³ö½áÊø£¬Ìí¼Ó»»ĞĞ
 	}
 	//R·ÖÁ¿
-	ofstream out_bdR("F:\\Code\\Shadow Detection\\Data\\Brightness Difference\\Brightness Statistics\\bd_R.txt");  //´ò¿ªÎÄ¼ş
-	for(int i=0;i<sceneMat.rows;i++)
+	ofstream out_bdR((bdDataPath+bdRname).data());  //´ò¿ªÎÄ¼ş
+	for(int i=0;i<chromaticityMat.rows;i++)
 	{
-		for(int j=0;j<sceneMat.cols;j++)
+		for(int j=0;j<chromaticityMat.cols;j++)
 		{
 			out_bdR<<bd_R[i][j]<<"\t";  //½«Ã¿¸öÔªËØĞ´ÈëÎÄ¼ş£¬ÒÔTab·Ö¸ô   ×¢£ºÈç¹û½á¹û³öÏÖÁË-1.#INDÔò±íÊ¾ºÜĞ¡£¬²»È·¶¨
 		}
@@ -514,7 +510,8 @@ int brightnessDiffer()
 	out_bdB.close();
 	out_bdG.close();
 	out_bdR.close();
-
+*/
+	
 	//¼ÆËãBDµÄÆÚÍû
 	bd_m_B=bd_m_B/chromaticityShadowNum;
 	bd_m_G=bd_m_G/chromaticityShadowNum;
@@ -524,9 +521,9 @@ int brightnessDiffer()
 	bd_variance_B=0;
 	bd_variance_G=0;
 	bd_variance_R=0;
-	for(int i=0;i<sceneMat.rows; i++)
+	for(int i=0;i<chromaticityMat.rows; i++)
 	{
-		for(int j=0; j<sceneMat.cols; j++)
+		for(int j=0; j<chromaticityMat.cols; j++)
 		{
 			if(chromaticityMat.at<Vec3b>(i,j)[0]==0 && chromaticityMat.at<Vec3b>(i,j)[1]==255 && chromaticityMat.at<Vec3b>(i,j)[0]==0)
 			{
@@ -548,7 +545,8 @@ int brightnessDiffer()
 	bd_thresholdH_R= bd_m_R + 1.96*bd_variance_R;  //R·ÖÁ¿
 	bd_thresholdL_R= bd_m_R - 1.96*bd_variance_R;
 
-	cout<<endl;
+	/*
+	//---------------ÏÔÊ¾¼ÆËã½á¹û£º´Ë´¦¿ÉÒÔ×¢ÊÍµô-------------------
 	cout<<"--------------------BD¼ÆËã½á¹û----------------------"<<endl;
 	cout<<"BD_BµÄÆÚÍû£º"<<bd_m_B<<endl;
 	cout<<"BD_GµÄÆÚÍû£º"<<bd_m_G<<endl;
@@ -559,11 +557,15 @@ int brightnessDiffer()
 	cout<<"BµÄ·ÖÀàãĞÖµ£º"<<bd_thresholdL_B<<"\t"<<bd_thresholdH_B<<endl;
 	cout<<"GµÄ·ÖÀàãĞÖµ£º"<<bd_thresholdL_G<<"\t"<<bd_thresholdH_G<<endl;
 	cout<<"RµÄ·ÖÀàãĞÖµ£º"<<bd_thresholdL_R<<"\t"<<bd_thresholdH_R<<endl;
+	*/
 
 	brightnessMat=chromaticityMat.clone();   //Éî¿½±´£ºbrightnessMat¿½±´ÁËchromaticityMat£¬ĞÎ³ÉÒ»¸öĞÂµÄÍ¼Ïñ¾ØÕó£¬Á½ÕßÏà»¥Ã»ÓĞÓ°Ïì
-	namedWindow("¶Ô±È£ºÉ«¶È²î¼ì²â½á¹û",WINDOW_NORMAL);
-	imshow("¶Ô±È£ºÉ«¶È²î¼ì²â½á¹û", chromaticityMat);
-	waitKey(0);
+	
+	//---------------ÏÔÊ¾Í¼Ïñ£º´Ë´¦¿ÉÒÔ×¢ÊÍµô-------------------
+	//namedWindow("¶Ô±È£ºÉ«¶È²î¼ì²â½á¹û",WINDOW_NORMAL);
+	//imshow("¶Ô±È£ºÉ«¶È²î¼ì²â½á¹û", chromaticityMat);
+	//waitKey(0);
+	
 	//É«¶È²î¼ì²â½á¹û£º±³¾°Îª»ÆÉ«£¬ÎïÌåºìÉ«£¬ÒõÓ°ÂÌÉ«¡£ÁÁ¶È²îÖ»ĞèÔÚÒõÓ°ºòÑ¡ÇøÖĞÇø·ÖÄ³ÏñËØÊÇÎïÌå»¹ÊÇÒõÓ°
 	int addObject=0;   //ÁÁ¶È±ÈĞÂ¼ì²â³öµÄÎïÌåÏñËØÊı
 	for(int i=0;i<brightnessMat.rows;i++)
@@ -596,7 +598,8 @@ int brightnessDiffer()
 			}
 		}
 	}
-	cout<<"ÁÁ¶È±ÈĞÂ¼ì²â³öµÄÎïÌåÏñËØÊı£º"<<addObject<<endl;
+	////---------------¼ÆËãĞÂ¼ì²â³öµÄÎïÌåÏñËØ£º´Ë´¦¿ÉÒÔ×¢ÊÍµô-------------------
+/*	cout<<"ÁÁ¶È±ÈĞÂ¼ì²â³öµÄÎïÌåÏñËØÊı£º"<<addObject<<endl;
 	//²âÊÔstruct´æ´¢µÄÒõÓ°ĞÅÏ¢ÊÇ·ñÓëÉ«¶È²î¼ì²â½á¹ûÒ»ÖÂ
 	int testNum=0;
 	for(int i=0;i<HEIGHT;i++)
@@ -608,17 +611,18 @@ int brightnessDiffer()
 		}
 	}
 	cout<<"µ±Ç°ÒõÓ°ÏñËØ×ÜÊıÎª:"<<testNum<<endl;
+	*/
 
-	//´Ë²½ÏÔÊ¾ÊÇÎªÁË½«ÁÁ¶È²î¼ì²â½á¹ûÓëÉ«¶È²î¼ì²â½á¹û½øĞĞ¶Ô±È
-	namedWindow("¶Ô±È£ºÁÁ¶È²î¼ì²â½á¹û",WINDOW_NORMAL);
-	imshow("¶Ô±È£ºÁÁ¶È²î¼ì²â½á¹û", brightnessMat);
-	waitKey(0);
-	destroyWindow("¶Ô±È£ºÉ«¶È²î¼ì²â½á¹û");
-	destroyWindow("¶Ô±È£ºÁÁ¶È²î¼ì²â½á¹û");
+	//-------------´Ë²½ÏÔÊ¾ÊÇÎªÁË½«ÁÁ¶È²î¼ì²â½á¹ûÓëÉ«¶È²î¼ì²â½á¹û½øĞĞ¶Ô±È,¿ÉÒÔ×¢ÊÍ------------------------
+	//namedWindow("¶Ô±È£ºÁÁ¶È²î¼ì²â½á¹û",WINDOW_NORMAL);
+	//imshow("¶Ô±È£ºÁÁ¶È²î¼ì²â½á¹û", brightnessMat);
+	//waitKey(0);
+	//destroyWindow("¶Ô±È£ºÉ«¶È²î¼ì²â½á¹û");
+	//destroyWindow("¶Ô±È£ºÁÁ¶È²î¼ì²â½á¹û");
 
-	//±£´æ¶Ô±ÈÍ¼Æ¬
-	//imwrite("F:\\Code\\Shadow Detection\\Data\\Brightness Difference\\Brightness Differ Result\\20170228111043_brightness_VS_chromaticity.jpg", brightnessMat);
-	imwrite("F:\\Code\\Shadow Detection\\Data\\Brightness Difference\\Brightness Differ Result\\20170228111043_brightness_VS_chromaticity.bmp", brightnessMat);
+	//-----------------------±£´æ¶Ô±ÈÍ¼Æ¬:¿ÉÒÔ×¢ÊÍ-----------------------------------
+	//string brVSchroPath="F:\\Code\\Projection Line in Shadow\\Data\\Brightness Differ\\Brightness VS Chromaticity\\";  
+	//imwrite((brVSchroPath+picName+"_brightness_VS_chromaticity.bmp").data(), brightnessMat);
 
 	//±£´æÉ«¶È+ÁÁ¶ÈµÄ½á¹û£¬Í³Ò»ÑÕÉ«£ºÒõÓ°ÂÌÉ«£¬ÎïÌåºìÉ«
 	for(int i=0;i<brightnessMat.rows;i++)
@@ -633,27 +637,25 @@ int brightnessDiffer()
 			}
 		}
 	}
-	namedWindow("É«¶È+ÁÁ¶È²î¼ì²â½á¹û",WINDOW_NORMAL);
-	imshow("É«¶È+ÁÁ¶È²î¼ì²â½á¹û", brightnessMat);
-	waitKey(0);
-	destroyWindow("É«¶È+ÁÁ¶È²î¼ì²â½á¹û");
-	//±£´æ½øÒ»²½¼ì²âµÄÍ¼Æ¬
-	//imwrite("F:\\Code\\Shadow Detection\\Data\\Brightness Difference\\Brightness Differ Result\\20170228111043_brightness+chromaticity.jpg", brightnessMat);
-	imwrite("F:\\Code\\Shadow Detection\\Data\\Brightness Difference\\Brightness Differ Result\\20170228111043_brightness+chromaticity.bmp", brightnessMat);
 
+	//---------------ÏÔÊ¾Í¼Ïñ£º´Ë´¦¿ÉÒÔ×¢ÊÍµô-------------------
+	//namedWindow("É«¶È+ÁÁ¶È²î¼ì²â½á¹û",WINDOW_NORMAL);
+	//imshow("É«¶È+ÁÁ¶È²î¼ì²â½á¹û", brightnessMat);
+	//waitKey(0);
+	//destroyWindow("É«¶È+ÁÁ¶È²î¼ì²â½á¹û");
+
+	//-----------------±£´æ½øÒ»²½¼ì²âµÄÍ¼Æ¬£º¿ÉÒÔ×¢ÊÍ-------------------------
+	//string brPath="F:\\Code\\Projection Line in Shadow\\Data\\Brightness Differ\\Brightness Differ Result\\";  //Â·¾¶
+	//imwrite((brPath+picName+"_brightness.bmp").data(), brightnessMat);
+	
 	return 0;
 }
+
 
 //¾Ö²¿ÁÁ¶È±È
 int localRelation()
 {
-	cout<<"-------------¾Ö²¿Ç¿¶È±È¼ì²âÒõÓ°------------------"<<endl;
-	//	localMat=brightnessMat.clone();   //Éî¿½±´£ºlocalMat¿½±´ÁËbrightnessMat£¬ĞÎ³ÉÒ»¸öĞÂµÄÍ¼Ïñ¾ØÕó£¬Á½ÕßÏà»¥Ã»ÓĞÓ°Ïì
-	localMat=imread("F:\\Code\\Shadow Detection\\Data\\Brightness Difference\\Brightness Differ Result\\20170228111043_brightness+chromaticity.bmp");  //¶ÁÈ¡Í¼Ïñ
-	namedWindow("É«¶È+ÁÁ¶È²î¼ì²â½á¹û",WINDOW_NORMAL);
-	imshow("É«¶È+ÁÁ¶È²î¼ì²â½á¹û", localMat);
-	waitKey(0);
-
+	localMat=brightnessMat.clone();
 	//³õÊ¼»¯QÖµ
 	for(int i=0;i<localMat.rows;i++)
 	{
@@ -726,7 +728,9 @@ int localRelation()
 			}
 		}
 	}
-	cout<<"¾Ö²¿¹ØÏµĞÂ¼ì²â³öµÄÎïÌåÏñËØÊı£º"<<addObject<<endl;
+
+	//---------------------Êä³öĞÂÔöÒõÓ°ÏñËØ¸öÊı£¬¿ÉÒÔ×¢ÊÍ---------------------------
+/*	cout<<"¾Ö²¿¹ØÏµĞÂ¼ì²â³öµÄÎïÌåÏñËØÊı£º"<<addObject<<endl;
 	//²âÊÔstruct´æ´¢µÄÒõÓ°ĞÅÏ¢ÊÇ·ñÓëÉ«¶È²î¼ì²â½á¹ûÒ»ÖÂ
 	int testNum=0;
 	for(int i=0;i<HEIGHT;i++)
@@ -738,17 +742,17 @@ int localRelation()
 		}
 	}
 	cout<<"µ±Ç°ÒõÓ°ÏñËØ×ÜÊıÎª:"<<testNum<<endl;
+	*/
 
-	//´Ë²½ÏÔÊ¾ÊÇÎªÁË½«¾Ö²¿¶Ô±È¼ì²â½á¹ûÓëÉ«¶È+ÁÁ¶È²î¼ì²â½á¹û½øĞĞ¶Ô±È
-	namedWindow("¾Ö²¿¶Ô±È¼ì²â½á¹û",WINDOW_NORMAL);
-	imshow("¾Ö²¿¶Ô±È¼ì²â½á¹û", localMat);
-	waitKey(0);
-	destroyWindow("¾Ö²¿¶Ô±È¼ì²â½á¹û");
-	destroyWindow("É«¶È+ÁÁ¶È²î¼ì²â½á¹û");
+	//--------------´Ë²½ÏÔÊ¾ÊÇÎªÁË½«¾Ö²¿¶Ô±È¼ì²â½á¹ûÓëÉ«¶È+ÁÁ¶È²î¼ì²â½á¹û½øĞĞ¶Ô±È,¿ÉÒÔ×¢ÊÍ----------------
+	//namedWindow("¾Ö²¿¶Ô±È¼ì²â½á¹û",WINDOW_NORMAL);
+	//imshow("¾Ö²¿¶Ô±È¼ì²â½á¹û", localMat);
+	//waitKey(0);
+	//destroyWindow("¾Ö²¿¶Ô±È¼ì²â½á¹û");
 
-	//±£´æ¶Ô±ÈÍ¼Æ¬
-	//imwrite("F:\\Code\\Shadow Detection\\Data\\Local Relation\\Local Relation Result\\20170228111043_brightness_VS_local.jpg", localMat);
-	imwrite("F:\\Code\\Shadow Detection\\Data\\Local Relation\\Local Relation Result\\20170228111043_brightness_VS_local.bmp", localMat);
+	//--------------------±£´æ¶Ô±ÈÍ¼Æ¬,¿ÉÒÔ×¢ÊÍ----------------
+	//string brVSlocalPath="F:\\Code\\Projection Line in Shadow\\Data\\Local Relation\\Brightness VS Local\\";
+	//imwrite((brVSlocalPath+picName+"_brightness_VS_local.bmp"),localMat);
 
 	//±£´æÉ«¶È+ÁÁ¶È+¾Ö²¿¶Ô±ÈµÄ½á¹û£¬Í³Ò»ÑÕÉ«£ºÒõÓ°ÂÌÉ«£¬ÎïÌåºìÉ«
 	for(int i=0;i<localMat.rows;i++)
@@ -763,30 +767,34 @@ int localRelation()
 			}
 		}
 	}
-	namedWindow("É«¶È+ÁÁ¶È²î+¾Ö²¿¶Ô±È¼ì²â½á¹û",WINDOW_NORMAL);
-	imshow("É«¶È+ÁÁ¶È²î+¾Ö²¿¶Ô±È¼ì¼ì²â½á¹û", localMat);
-	waitKey(0);
-	destroyWindow("É«¶È+ÁÁ¶È²î+¾Ö²¿¶Ô±È¼ì¼ì²â½á¹û");
-	//±£´æ½øÒ»²½¼ì²âµÄÍ¼Æ¬
-	//imwrite("F:\\Code\\Shadow Detection\\Data\\Local Relation\\Local Relation Result\\20170228111043_brightness+local.jpg", localMat);
-	imwrite("F:\\Code\\Shadow Detection\\Data\\Local Relation\\Local Relation Result\\20170228111043_brightness+local.bmp", localMat);
+	//--------------ÏÔÊ¾Í¼Æ¬£¬¿ÉÒÔ×¢ÊÍ----------------
+	//namedWindow("É«¶È+ÁÁ¶È²î+¾Ö²¿¶Ô±È¼ì²â½á¹û",WINDOW_NORMAL);
+	//imshow("É«¶È+ÁÁ¶È²î+¾Ö²¿¶Ô±È¼ì¼ì²â½á¹û", localMat);
+	//waitKey(0);
+	//destroyWindow("É«¶È+ÁÁ¶È²î+¾Ö²¿¶Ô±È¼ì¼ì²â½á¹û");
+
+	//---------------------------±£´æ½øÒ»²½¼ì²âµÄÍ¼Æ¬£¬¿ÉÒÔ×¢ÊÍ----------------
+	//string localPath="F:\\Code\\Projection Line in Shadow\\Data\\Local Relation\\Local Relation Result\\";
+	//imwrite((localPath+picName+"_local.bmp"),localMat);
 
 	return 0;
 }
 
 //ÀûÓÃÁ¬Í¨ÓòµÄ°üÎ§¹ØÏµÓÅ»¯ÒõÓ°ºÍÎïÌå
+//int spatialAjustment()£ºÊÖ¶¯µ÷½ÚãĞÖµ£¬»­³öÍ¼ĞÎÖĞµÄ¸÷¸öÂÖÀª
 int spatialAjustment()
 {
 	cout<<"-------------ÀûÓÃÁ¬Í¨ÓòµÄ°üÎ§¹ØÏµÓÅ»¯½á¹û------------------"<<endl;
-	//spacialMat=localMat.clone();   //Éî¿½±´£ºspacialMat¿½±´ÁËlocalMat£¬ĞÎ³ÉÒ»¸öĞÂµÄÍ¼Ïñ¾ØÕó£¬Á½ÕßÏà»¥Ã»ÓĞÓ°Ïì
-	spacialMat=imread("F:\\Code\\Shadow Detection\\Data\\Local Relation\\Local Relation Result\\20170228111043_brightness+local.bmp");  //¶ÁÈ¡Í¼Ïñ
-	//spacialMat=imread("F:\\Code\\Shadow Detection\\Data\\Color Space\\RGB\\Img_Rgb.jpg");
-	namedWindow("¶Ô±È£ºÉ«¶È+ÁÁ¶È²î+¾Ö²¿¼ì²â½á¹û",WINDOW_NORMAL);
-	imshow("¶Ô±È£ºÉ«¶È+ÁÁ¶È²î+¾Ö²¿¼ì²â½á¹û", spacialMat);
-	waitKey(0);
+	spacialMat=localMat.clone();   //Éî¿½±´£ºspacialMat¿½±´ÁËlocalMat£¬ĞÎ³ÉÒ»¸öĞÂµÄÍ¼Ïñ¾ØÕó£¬Á½ÕßÏà»¥Ã»ÓĞÓ°Ïì
+	//spacialMat=imread("F:\\Code\\Shadow Detection\\Data\\Local Relation\\Local Relation Result\\20170228111043_brightness+local.bmp");  //¶ÁÈ¡Í¼Ïñ
 
 	//½«Ô­Í¼×ªÎª»Ò¶ÈÍ¼
 	cvtColor(spacialMat, spacialGrayMat, CV_BGR2GRAY);
+
+	//ÏÔÊ¾»Ò¶ÈÍ¼
+	namedWindow(WINDOW_NAME1, CV_WINDOW_AUTOSIZE);
+	imshow(WINDOW_NAME1, spacialGrayMat);
+	waitKey(0);
 
 	//´´½¨Ô­Í¼´°¿Ú²¢ÏÔÊ¾
 	namedWindow(WINDOW_NAME1, CV_WINDOW_AUTOSIZE);
@@ -831,14 +839,18 @@ void on_ThreshChange(int, void*)
 	//µÚËÄ¸ö²ÎÊı£ºmaxvalue£¬µ±µÚÎå¸ö²ÎÊıÈ¡THRESH_BINARY»òTHRESH_BINARY_INVÀàĞÍÊ±µÄ×î´óÖµ£¨¶şÖµ»¯£º0ºÚ£¬255°×£©
 	//µÚÎå¸ö²ÎÊı£ºãĞÖµÀàĞÍ£ºTHRESH_BINARY µ±Ç°µã´óÓÚãĞÖµÊ±£¬È¡maxvalue£¨¼´µÚËÄ¸ö²ÎÊı£©£¬·ñÔòÉèÖÃÎª0
 	threshold(spacialGrayMat, threshold_output, g_nThresh, 255, THRESH_BINARY);
+	//ÏÔÊ¾¶şÖµ»¯ºóµÄÍ¼
+	namedWindow(WINDOW_NAME1, CV_WINDOW_AUTOSIZE);
+	imshow(WINDOW_NAME1, threshold_output);
+	waitKey(0);
 
 	
 	//Ñ°ÕÒÂÖÀª
 	//  µÚÒ»¸ö²ÎÊı£ºÊäÈëÍ¼Ïñ£¬8bitµÄµ¥Í¨µÀ¶şÖµÍ¼Ïñ
-	contours£º¼ì²âµ½µÄÂÖÀª£¬ÊÇÒ»¸öÏòÁ¿£¬Ã¿¸öÔªËØ¶¼ÊÇÒ»¸öÂÖÀª¡£Òò´Ë£¬Õâ¸öÏòÁ¿µÄÃ¿¸öÔªËØ¶¼ÊÇÒ»¸öÏòÁ¿£¬¼´vector<vector<Point>>contours
-	hierarchy:¸÷¸öÂÖÀªµÄ¼Ì³Ğ¹ØÏµ¡£hierarchyÒ²ÊÇÒ»¸öÏòÁ¿£¬³¤¶ÈÓëcontoursÏàµÈ£¬Ã¿¸öÔªËØºÍcontoursµÄÔªËØ¶ÔÓ¦¡£
-	hierarchyµÄÃ¿¸öÔªËØÊÇÒ»¸ö°üº¬ËÄ¸öÕûĞÍÊıµÄÏòÁ¿£¬¼´vector<Vec4i>hierarchy
-	hierarchy[i][0],hierarchy[i][1],hierarchy[i][2],hierarchy[i][3]·Ö±ğ±íÊ¾µÚiÌõÂÖÀª£¨contours[i])µÄÏÂÒ»Ìõ£¬Ç°Ò»Ìõ£¬°üº¬µÄµÚÒ»Ìõ×ÓÂÖÀªºÍ°üº¬ËüµÄ¸¸ÂÖÀª
+	//contours£º¼ì²âµ½µÄÂÖÀª£¬ÊÇÒ»¸öÏòÁ¿£¬Ã¿¸öÔªËØ¶¼ÊÇÒ»¸öÂÖÀª¡£Òò´Ë£¬Õâ¸öÏòÁ¿µÄÃ¿¸öÔªËØ¶¼ÊÇÒ»¸öÏòÁ¿£¬¼´vector<vector<Point>>contours
+	//hierarchy:¸÷¸öÂÖÀªµÄ¼Ì³Ğ¹ØÏµ¡£hierarchyÒ²ÊÇÒ»¸öÏòÁ¿£¬³¤¶ÈÓëcontoursÏàµÈ£¬Ã¿¸öÔªËØºÍcontoursµÄÔªËØ¶ÔÓ¦¡£
+	//hierarchyµÄÃ¿¸öÔªËØÊÇÒ»¸ö°üº¬ËÄ¸öÕûĞÍÊıµÄÏòÁ¿£¬¼´vector<Vec4i>hierarchy
+	//hierarchy[i][0],hierarchy[i][1],hierarchy[i][2],hierarchy[i][3]·Ö±ğ±íÊ¾µÚiÌõÂÖÀª£¨contours[i])µÄÏÂÒ»Ìõ£¬Ç°Ò»Ìõ£¬°üº¬µÄµÚÒ»Ìõ×ÓÂÖÀªºÍ°üº¬ËüµÄ¸¸ÂÖÀª
 	//µÚËÄ¸ö²ÎÊı£º¼ì²âÂÖÀªµÄ·½·¨£¬¹²ÓĞËÄÖÖ¡£CV_RETR_TREE¼ì²âËùÓĞÂÖÀª£¬²¢½¨Á¢ËùÓĞµÄ¼Ì³Ğ£¨°üº¬£©¹ØÏµ¡£
 	//µÚÎå¸ö²ÎÊı£º±íÊ¾Ò»ÌõÂÖÀªµÄ·½·¨¡£CV_CHAIN_APPROX_SIMPLEÖ»´æ´¢Ë®Æ½¡¢´¹Ö±¡¢¶Ô½ÇÖ±ÏßµÄÆğÊ¼µã¡£
 	//µÚÁù¸ö²ÎÊı£ºÃ¿Ò»¸öÂÖÀªµãµÄÆ«ÒÆÁ¿£¬µ±ÂÖÀªÊÇ´ÓÍ¼ĞÎROIÖĞ£¨¸ĞĞËÈ¤Çø£©ÌáÈ¡³öÀ´µÄÊ±ºò£¬Ê¹ÓÃÆ«ÒÆÁ¿ÓĞÓÃ£¬ÒòÎª¿ÉÒÔ´ÓÕû¸öÍ¼ÏñÉÏÏÂÎÄÀ´¶ÔÂÖÀª×ö·ÖÎö
@@ -886,7 +898,7 @@ void on_ThreshChange(int, void*)
 	namedWindow(WINDOW_NAME2, CV_WINDOW_AUTOSIZE);
 	imshow(WINDOW_NAME2, drawing);
 }
-
+/*
 //Ìî³äĞ¡Á¬Í¨Óò
 void fillSmallDomain()
 {
@@ -1304,14 +1316,13 @@ int shadowDetection()
 	chromaticityDiffer();
 
 	//step2. ÁÁ¶È²îÒõÓ°¼ì²â
-	//×¢£ºÕâ¸öº¯ÊıÒªÓÃµ½chromaticityDiffer()
-//	brightnessDiffer();
+	brightnessDiffer();
 
 	//step3. ¾Ö²¿ÁÁ¶È±È
-//	localRelation();
+	localRelation();
 
 	//step4.ÀûÓÃÁ¬Í¨ÓòµÄ°üÎ§¹ØÏµÓÅ»¯ÒõÓ°ºÍÎïÌå
-//	spatialAjustment();  //ÊÖ¶¯Ñ¡È¡ãĞÖµ
+	spatialAjustment();  //ÊÖ¶¯Ñ¡È¡ãĞÖµ
 
 	//step5.Ìî³ä×îĞ¡Á¬Í¨Óò
 //	fillSmallDomain();   //Ìî³ä×îĞ¡Á¬Í¨Óò
