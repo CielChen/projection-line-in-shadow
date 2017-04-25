@@ -1,10 +1,12 @@
-﻿生成启动时间为 2017/4/24 15:32:00。
+﻿生成启动时间为 2017/4/25 17:10:16。
      1>项目“F:\Code\Projection Line in Shadow\Projection Line in Shadow\Projection Line in Shadow.vcxproj”在节点 2 上(Build 个目标)。
      1>ClCompile:
          C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt shadow_detection.cpp
          shadow_detection.cpp
-     1>f:\code\projection line in shadow\projection line in shadow\shadow_detection.cpp(863): warning C4018: “<”: 有符号/无符号不匹配
-     1>f:\code\projection line in shadow\projection line in shadow\shadow_detection.cpp(873): warning C4018: “<”: 有符号/无符号不匹配
+     1>f:\code\projection line in shadow\projection line in shadow\shadow_detection.cpp(865): warning C4018: “<”: 有符号/无符号不匹配
+     1>f:\code\projection line in shadow\projection line in shadow\shadow_detection.cpp(875): warning C4018: “<”: 有符号/无符号不匹配
+     1>f:\code\projection line in shadow\projection line in shadow\shadow_detection.cpp(955): warning C4101: “external_color”: 未引用的局部变量
+     1>f:\code\projection line in shadow\projection line in shadow\shadow_detection.cpp(956): warning C4101: “hole_color”: 未引用的局部变量
        Link:
          C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"F:\Code\Projection Line in Shadow\Debug\Projection Line in Shadow.exe" /INCREMENTAL /NOLOGO opencv_ml2413d.lib opencv_calib3d2413d.lib opencv_contrib2413d.lib opencv_core2413d.lib opencv_features2d2413d.lib opencv_flann2413d.lib opencv_gpu2413d.lib opencv_highgui2413d.lib opencv_imgproc2413d.lib opencv_legacy2413d.lib opencv_objdetect2413d.lib opencv_ts2413d.lib opencv_video2413d.lib opencv_nonfree2413d.lib opencv_ocl2413d.lib opencv_photo2413d.lib opencv_stitching2413d.lib opencv_superres2413d.lib opencv_videostab2413d.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"F:\Code\Projection Line in Shadow\Debug\Projection Line in Shadow.pdb" /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"F:\Code\Projection Line in Shadow\Debug\Projection Line in Shadow.lib" /MACHINE:X86 Debug\main.obj
          Debug\shadow_detection.obj
@@ -14,4 +16,4 @@
 
 生成成功。
 
-已用时间 00:00:02.04
+已用时间 00:00:02.13

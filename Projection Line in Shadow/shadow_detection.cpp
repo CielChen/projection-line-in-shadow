@@ -32,7 +32,7 @@ using namespace std;
 #define WINDOW_NAME2 "效果图窗口"
 
 Mat foreMat;
-Mat chromaticityMat, brightnessMat, localMat, spacialMat, spacialGrayMat;  //存储每步阴影检测结果
+Mat chromaticityMat, brightnessMat, localMat, spacialMat, spacialGrayMat, finalMat;  //存储每步阴影检测结果
 
 //注：Mat.rows(矩阵行数)=pic.heigt(图像高度),Mat.cols(矩阵的列数)=pic.width(图像宽度)
 int foreRGB_B[HEIGHT][WIDTH],foreRGB_G[HEIGHT][WIDTH],foreRGB_R[HEIGHT][WIDTH];  //前景图像的RGB分量
@@ -70,6 +70,8 @@ RNG g_rng(12345);
 //vector<Vec4i> g_viHierarchy;
 void on_ThreshChange(int, void*);
 
+int cvBinaryThresh=100;  //图像二值化时用到的阈值和max_value
+int cvBinaryMax=200;
 
 //求向量的2范数
 double norm2(int b,int g,int r)
@@ -835,7 +837,7 @@ void on_ThreshChange(int, void*)
 	//  threshold函数：遍历灰度图，将图像信息二值化，处理过后的图片只有两种色值
 	//第一个参数：输入，必须为单通道，8bit或32bit浮点类型的Mat即可
 	//第二个参数：存放输出结果，且与第一个参数有相同的尺寸和类型
-	//第三个参数：阈值的具体值
+	//第三个参数：阈值的具体值。注意：这里的阈值为手动设置的全局阈值！！！需要改进。
 	//第四个参数：maxvalue，当第五个参数取THRESH_BINARY或THRESH_BINARY_INV类型时的最大值（二值化：0黑，255白）
 	//第五个参数：阈值类型：THRESH_BINARY 当前点大于阈值时，取maxvalue（即第四个参数），否则设置为0
 	threshold(spacialGrayMat, threshold_output, g_nThresh, 255, THRESH_BINARY);
@@ -846,7 +848,7 @@ void on_ThreshChange(int, void*)
 
 	
 	//寻找轮廓
-	//  第一个参数：输入图像，8bit的单通道二值图像
+	//第一个参数：输入图像，8bit的单通道二值图像
 	//contours：检测到的轮廓，是一个向量，每个元素都是一个轮廓。因此，这个向量的每个元素都是一个向量，即vector<vector<Point>>contours
 	//hierarchy:各个轮廓的继承关系。hierarchy也是一个向量，长度与contours相等，每个元素和contours的元素对应。
 	//hierarchy的每个元素是一个包含四个整型数的向量，即vector<Vec4i>hierarchy
@@ -898,11 +900,11 @@ void on_ThreshChange(int, void*)
 	namedWindow(WINDOW_NAME2, CV_WINDOW_AUTOSIZE);
 	imshow(WINDOW_NAME2, drawing);
 }
-/*
+
 //填充小连通域
 void fillSmallDomain()
 {
-	spacialMat=imread("F:\\Code\\Shadow Detection\\Data\\Local Relation\\Local Relation Result\\20170228111043_brightness+local.bmp");  //读取图像
+	spacialMat=localMat.clone();  
 	//统计当前的物体(红色）像素个数
 	int objectNum=0;
 	int shadowNum=0;
@@ -913,7 +915,6 @@ void fillSmallDomain()
 		{
 			graph[i][j].revise=0;
 			//物体：红色
-			//if( abs(spacialMat.at<Vec3b>(i,j)[0]-0)==0 && abs(spacialMat.at<Vec3b>(i,j)[1]-0)==0 && abs(spacialMat.at<Vec3b>(i,j)[2]-255)==0 )
 			if( spacialMat.at<Vec3b>(i,j)[0]==0 && spacialMat.at<Vec3b>(i,j)[1]==0 && spacialMat.at<Vec3b>(i,j)[2]==255 )	
 			{
 				objectNum++;
@@ -931,15 +932,17 @@ void fillSmallDomain()
 			}
 		}
 	}
-	cout<<"当前物体像素个数："<<objectNum<<endl;
-	cout<<"当前阴影像素个数："<<shadowNum<<endl;
-	cout<<"当前背景像素个数："<<backNum<<endl;
+	//-----------------------输出，可注释------------------------
+	//cout<<"当前物体像素个数："<<objectNum<<endl;
+	//cout<<"当前阴影像素个数："<<shadowNum<<endl;
+	//cout<<"当前背景像素个数："<<backNum<<endl;
 
 
 	//定义小连通域：物体像素总数的4%
 	double connectedDomain;
 	connectedDomain = objectNum * 0.04;
-	cout<<"连通域包含的像素个数："<<connectedDomain<<endl;
+	//-----------------------输出，可注释------------------------
+	//cout<<"连通域包含的像素个数："<<connectedDomain<<endl;
 
 	//-------------基于之前的阈值调整，以下利用最优的阈值------------------------------
 	IplImage* src=NULL;
@@ -952,13 +955,18 @@ void fillSmallDomain()
 	CvScalar external_color;  //外轮廓颜色。图像二值化后，只有黑色和白色，白色区域的轮廓是“外轮廓”
 	CvScalar hole_color;  //内轮廓颜色，黑色区域的轮廓是“内轮廓”
 
-	src=cvLoadImage("F:\\Code\\Shadow Detection\\Data\\Local Relation\\Local Relation Result\\20170228111043_brightness+local.bmp",1);
+	src=&IplImage(spacialMat);  //将Mat转为IplImage
 	img=cvCreateImage(cvGetSize(src), IPL_DEPTH_8U, 1);
 	dst=cvCreateImage(cvGetSize(src), src->depth, src->nChannels);
 
-	cvCvtColor(src, img, CV_BGR2GRAY);
-	//注意！！！！！此处的100是基于之前手动阈值调整自己设置的最优寻找轮廓的阈值！！！！
-	cvThreshold(img, img, 100, 200, CV_THRESH_BINARY);
+	cvCvtColor(src, img, CV_BGR2GRAY);  //将RGB转为灰度图
+
+	//cvThreshold():对灰度图像进行阈值操作得到二值图像。
+	//前两个参数：原始图，输出图
+	//第三个参数：阈值。注意！！！！！此处的100是基于之前手动阈值调整自己设置的最优寻找轮廓的阈值！！！！
+	//第四个参数：使用 CV_THRESH_BINARY 和 CV_THRESH_BINARY_INV 的最大值。
+	//第五个参数：阈值类型为CV_THRESH_BINARY时，如果 src(x,y)>threshold ,dst(x,y) = max_value; 否则,dst（x,y）=0
+	cvThreshold(img, img, cvBinaryThresh, cvBinaryMax, CV_THRESH_BINARY);
 
 	//找到二值图像中的轮廓
 	// CV_RETR_LIST：提取所有轮廓，并放置在list中
@@ -1255,7 +1263,8 @@ void fillSmallDomain()
 		}
 		cNext=c->h_next;
 	}
-	cout<<"小连通域个数："<<count<<endl;
+	//---------------------------利用到的八邻域统计，可以注释-------------------------
+	/*cout<<"小连通域个数："<<count<<endl;
 	cout<<"up个数："<<up<<endl;
 	cout<<"right个数："<<right<<endl;
 	cout<<"down个数："<<down<<endl;
@@ -1265,9 +1274,12 @@ void fillSmallDomain()
 	cout<<"downleft个数："<<downleft<<endl;
 	cout<<"downright个数："<<downright<<endl;
 	cout<<"none个数："<<none<<endl;
-	cvNamedWindow("fill image", CV_WINDOW_AUTOSIZE);
-	cvShowImage("fill image", test);
-	cvWaitKey(0);
+	*/
+	//-----------------显示填充的小轮廓，可以注释----------------------
+	//cvNamedWindow("fill image", CV_WINDOW_AUTOSIZE);
+	//cvShowImage("fill image", test);
+	//cvWaitKey(0);
+	//cvDestroyWindow("fill image");
 
 
 	//------------保存新的图像-------
@@ -1276,38 +1288,37 @@ void fillSmallDomain()
 	{
 		for(int j=0; j<testMat.cols; j++)
 		{
+			//将所有被重新填充过的像素标注出来，即graph[i][j].revise=1
 			if( (testMat.at<Vec3b>(i,j)[0]==0 && testMat.at<Vec3b>(i,j)[1]==255 && testMat.at<Vec3b>(i,j)[2]==255) || (testMat.at<Vec3b>(i,j)[0]==0 && testMat.at<Vec3b>(i,j)[1]==0 && testMat.at<Vec3b>(i,j)[2]==255) || (testMat.at<Vec3b>(i,j)[0]==0 && testMat.at<Vec3b>(i,j)[1]==255 && testMat.at<Vec3b>(i,j)[2]==0))
 				graph[i][j].revise=1;
 		}
 	}
 
-	for(int i=0;i<spacialMat.rows;i++)
+	finalMat=spacialMat.clone();
+	for(int i=0;i<finalMat.rows;i++)
 	{
-		for(int j=0;j<spacialMat.cols;j++)
+		for(int j=0;j<finalMat.cols;j++)
 		{
+			//在“四邻域像素的亮度比”结果的基础上重新修改像素
 			if(graph[i][j].revise==1)
 			{
-				spacialMat.at<Vec3b>(i,j)[0]=testMat.at<Vec3b>(i,j)[0];   
-				spacialMat.at<Vec3b>(i,j)[1]=testMat.at<Vec3b>(i,j)[1];
-				spacialMat.at<Vec3b>(i,j)[2]=testMat.at<Vec3b>(i,j)[2];
+				finalMat.at<Vec3b>(i,j)[0]=testMat.at<Vec3b>(i,j)[0];   
+				finalMat.at<Vec3b>(i,j)[1]=testMat.at<Vec3b>(i,j)[1];
+				finalMat.at<Vec3b>(i,j)[2]=testMat.at<Vec3b>(i,j)[2];
 			}
 		}
 	}
-	namedWindow("填充最小连通域",WINDOW_NORMAL);
-	imshow("填充最小连通域", spacialMat);
-	waitKey(0);
-	destroyWindow("填充最小连通域");
-	cvDestroyWindow("filter image");	
-	cvDestroyWindow("fill image");
-	cvReleaseImage(&test);
-	cvReleaseImage(&src);
-	cvReleaseImage(&dst);
-	cvReleaseMemStorage(&storage);
-
-	//保存进一步检测的图片
-	imwrite("F:\\Code\\Shadow Detection\\Data\\Spacial Improved\\20170228111043_brightness+local+spacial.bmp", spacialMat);
+	//-----------------显示图片，可以注释----------------------
+	//namedWindow("填充最小连通域",WINDOW_NORMAL);
+	//imshow("填充最小连通域", finalMat);
+	//waitKey(0);
+	//destroyWindow("填充最小连通域");
+	
+	//----------------------------保存进一步检测的图片,可以注释----------------------
+	string finalPath="F:\\Code\\Projection Line in Shadow\\Data\\Final Result\\";
+	imwrite(finalPath+picName+"_final.bmp",finalMat);
 }
-*/
+
 
 //阴影检测算法
 int shadowDetection()
@@ -1322,10 +1333,11 @@ int shadowDetection()
 	localRelation();
 
 	//step4.利用连通域的包围关系优化阴影和物体
-	spatialAjustment();  //手动选取阈值
+	//step4.1 手动选取阈值.选取好阈值后，需要将此函数注释掉
+	//spatialAjustment();  
 
-	//step5.填充最小连通域
-//	fillSmallDomain();   //填充最小连通域
+	//step4.2 填充最小连通域
+	fillSmallDomain();   
 
 	return 0;
 }
