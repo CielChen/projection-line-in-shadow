@@ -4,8 +4,8 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "variable.h"
 #include "shadow_detection.h"
+#include "shadowExtraction.h"
 using namespace cv;
 using namespace std;
 
@@ -21,6 +21,9 @@ int main()
 	//（4）最小连通域阴影检测优化
 	shadowDetection();
 
+	//--------------------step3. 提取有效的阴影区-----------------------
+	shadowExtraction();
 
+	system("pause");
 	return 0;
 }

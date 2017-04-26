@@ -27,4 +27,5 @@ IplImage *back=cvLoadImage((backPath+picName+"_back.jpg").data());  //背景图像
 
 //cvarrToMat()：将Mat类型转换为IplImage，默认不拷贝数据，所以第二个参数要置为true
 Mat backgroundMat=cvarrToMat(back,true);  //背景图像
+Mat sceneMat=cvarrToMat(scene,true);   //场景图像
 

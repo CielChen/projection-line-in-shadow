@@ -23,4 +23,4 @@ extern string scenePath, backPath;
 extern string picName;
 extern IplImage *scene,*back;  
 extern Mat backgroundMat;
-
+extern Mat sceneMat;

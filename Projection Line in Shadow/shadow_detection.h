@@ -1,7 +1,6 @@
 #include <iostream>
 #include <highgui/highgui.hpp>
 
-
 //求向量的2范数
 double norm2(int b,int g,int r);
 

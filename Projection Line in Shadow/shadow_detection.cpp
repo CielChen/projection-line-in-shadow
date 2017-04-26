@@ -32,7 +32,8 @@ using namespace std;
 #define WINDOW_NAME2 "效果图窗口"
 
 Mat foreMat;
-Mat chromaticityMat, brightnessMat, localMat, spacialMat, spacialGrayMat, finalMat;  //存储每步阴影检测结果
+Mat chromaticityMat, brightnessMat, localMat, spacialMat, spacialGrayMat;  //存储每步阴影检测结果
+Mat finalMat;
 
 //注：Mat.rows(矩阵行数)=pic.heigt(图像高度),Mat.cols(矩阵的列数)=pic.width(图像宽度)
 int foreRGB_B[HEIGHT][WIDTH],foreRGB_G[HEIGHT][WIDTH],foreRGB_R[HEIGHT][WIDTH];  //前景图像的RGB分量
@@ -66,8 +67,7 @@ int chromaticityShadowNum;  //色度差检测到的阴影像素数
 int g_nThresh=100;
 int g_maxThresh=255;
 RNG g_rng(12345);
-//vector<vector<Point>> g_vContours;
-//vector<Vec4i> g_viHierarchy;
+
 void on_ThreshChange(int, void*);
 
 int cvBinaryThresh=100;  //图像二值化时用到的阈值和max_value
@@ -1049,9 +1049,10 @@ void fillSmallDomain()
 						graph[tempRow][tempCol].initColor_B=b;
 						graph[tempRow][tempCol].initColor_G=g;
 						graph[tempRow][tempCol].initColor_R=r;
-						if(b==0 && g==255 && r==255)
+						if(b==0 && g==255 && r==255)  //如果是邻域点属于背景，则该轮廓也为背景，就不必看轮廓上该点的其他邻域点；否则还要看其他邻域点
 						{	
 							graph[tempRow][tempCol].category=0;  //背景
+							break;
 						}
 						else if(b==0 && g==0 && r==255)
 						{
@@ -1059,8 +1060,8 @@ void fillSmallDomain()
 						}
 						else
 							graph[tempRow][tempCol].category=2;  //阴影
-							
-						break;
+
+						//break;
 					}
 
 					//右边的点
@@ -1079,6 +1080,7 @@ void fillSmallDomain()
 						if(b==0 && g==255 && r==255)
 						{	
 							graph[tempRow][tempCol].category=0;  //背景
+							break;
 						}
 						else if(b==0 && g==0 && r==255)
 						{
@@ -1087,7 +1089,7 @@ void fillSmallDomain()
 						else
 							graph[tempRow][tempCol].category=2;  //阴影
 
-						break;
+						//break;
 					}
 
 					//下边的点
@@ -1106,6 +1108,7 @@ void fillSmallDomain()
 						if(b==0 && g==255 && r==255)
 						{	
 							graph[tempRow][tempCol].category=0;  //背景
+							break;
 						}
 						else if(b==0 && g==0 && r==255)
 						{
@@ -1114,7 +1117,7 @@ void fillSmallDomain()
 						else
 							graph[tempRow][tempCol].category=2;  //阴影
 
-						break;
+						//break;
 					}
 
 					//左边的点
@@ -1133,6 +1136,7 @@ void fillSmallDomain()
 						if(b==0 && g==255 && r==255)
 						{	
 							graph[tempRow][tempCol].category=0;  //背景
+							break;
 						}
 						else if(b==0 && g==0 && r==255)
 						{
@@ -1141,7 +1145,7 @@ void fillSmallDomain()
 						else
 							graph[tempRow][tempCol].category=2;  //阴影
 
-						break;
+						//break;
 					}
 
 					//左上边的点
@@ -1160,6 +1164,7 @@ void fillSmallDomain()
 						if(b==0 && g==255 && r==255)
 						{	
 							graph[tempRow][tempCol].category=0;  //背景
+							break;
 						}
 						else if(b==0 && g==0 && r==255)
 						{
@@ -1168,7 +1173,7 @@ void fillSmallDomain()
 						else
 							graph[tempRow][tempCol].category=2;  //阴影
 
-						break;
+						//break;
 					}
 
 					//右上边的点
@@ -1187,6 +1192,7 @@ void fillSmallDomain()
 						if(b==0 && g==255 && r==255)
 						{	
 							graph[tempRow][tempCol].category=0;  //背景
+							break;
 						}
 						else if(b==0 && g==0 && r==255)
 						{
@@ -1195,7 +1201,7 @@ void fillSmallDomain()
 						else
 							graph[tempRow][tempCol].category=2;  //阴影
 
-						break;
+						//break;
 					}
 
 					//左下边的点
@@ -1214,6 +1220,7 @@ void fillSmallDomain()
 						if(b==0 && g==255 && r==255)
 						{	
 							graph[tempRow][tempCol].category=0;  //背景
+							break;
 						}
 						else if(b==0 && g==0 && r==255)
 						{
@@ -1222,7 +1229,7 @@ void fillSmallDomain()
 						else
 							graph[tempRow][tempCol].category=2;  //阴影
 
-						break;
+						//break;
 					}
 
 					//右下边的点
@@ -1241,6 +1248,7 @@ void fillSmallDomain()
 						if(b==0 && g==255 && r==255)
 						{	
 							graph[tempRow][tempCol].category=0;  //背景
+							break;
 						}
 						else if(b==0 && g==0 && r==255)
 						{
@@ -1249,7 +1257,7 @@ void fillSmallDomain()
 						else
 							graph[tempRow][tempCol].category=2;  //阴影
 
-						break;
+						//break;
 					}
 
 					none++;
@@ -1275,6 +1283,7 @@ void fillSmallDomain()
 	cout<<"downright个数："<<downright<<endl;
 	cout<<"none个数："<<none<<endl;
 	*/
+	
 	//-----------------显示填充的小轮廓，可以注释----------------------
 	//cvNamedWindow("fill image", CV_WINDOW_AUTOSIZE);
 	//cvShowImage("fill image", test);
@@ -1315,8 +1324,8 @@ void fillSmallDomain()
 	//destroyWindow("填充最小连通域");
 	
 	//----------------------------保存进一步检测的图片,可以注释----------------------
-	string finalPath="F:\\Code\\Projection Line in Shadow\\Data\\Final Result\\";
-	imwrite(finalPath+picName+"_final.bmp",finalMat);
+	//string finalPath="F:\\Code\\Projection Line in Shadow\\Data\\Final Result\\";
+	//imwrite(finalPath+picName+"_final.bmp",finalMat);
 }
 
 
