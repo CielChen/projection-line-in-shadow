@@ -21,10 +21,10 @@
     <ClInclude Include="shadow_detection.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="shadowExtraction.h">
+    <ClInclude Include="findDot.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="findDot.h">
+    <ClInclude Include="objectExtraction.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -38,7 +38,7 @@
     <ClCompile Include="shadow_detection.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="shadowExtraction.cpp">
+    <ClCompile Include="objectExtraction.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

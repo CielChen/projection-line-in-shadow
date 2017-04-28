@@ -65,13 +65,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="findDot.h" />
-    <ClInclude Include="shadowExtraction.h" />
+    <ClInclude Include="objectExtraction.h" />
     <ClInclude Include="shadow_detection.h" />
     <ClInclude Include="variable.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="shadowExtraction.cpp" />
+    <ClCompile Include="objectExtraction.cpp" />
     <ClCompile Include="shadow_detection.cpp" />
     <ClCompile Include="variable.cpp" />
   </ItemGroup>
